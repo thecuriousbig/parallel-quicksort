@@ -34,13 +34,13 @@ void quicksort(float *arr, int low, int high)
 {
   if (low < high)
   {
-    int pi = partition(arr, low, high);
+    int pivot = partition(arr, low, high);
 #pragma omp parallel sections
     {
 #pragma omp section
-      quicksort(arr, low, pi - 1);
+      quicksort(arr, low, pivot - 1);
 #pragma omp section
-      quicksort(arr, pi + 1, high);
+      quicksort(arr, pivot + 1, high);
     }
   }
 }
@@ -64,11 +64,9 @@ int main(int argc, char **argv)
 
   /* Recieve */
   int receive_size;
-  int receive_displacement;
-  int i, j, k;
+  int *receive_displacement;
 
-  /* Partition */
-  int pivotIndex;
+  int i, j, k;
 
   int numthread;
 
@@ -82,6 +80,12 @@ int main(int argc, char **argv)
   // MPI_Init(&argc, &argv);
   // MPI_Comm_size(MPI_COMM_WORLD, &numProc);
   // MPI_Comm_rank(MPI_COMM_WORLD, &id);
+
+  /* Allocate all variable */
+  displacement = (int *)malloc(sizeof(int) * numProc);
+  receive_displacement = (int *)malloc(sizeof(int) * numProc);
+  sub_array_size = (int *)malloc(sizeof(int) * numProc);
+  
 
   if (id == 0)
   {
@@ -111,10 +115,6 @@ int main(int argc, char **argv)
     /*     PARTITION ARRAY     */
     /***************************/
 
-    /* Allocate variable */
-    sub_array_size = (int *)malloc(sizeof(int) * numProc);
-    displacement = (int *)malloc(sizeof(int) * numProc);
-
     /* Partitioning array */
     for (i = 0; i < numProc; i++)
       *(sub_array_size + i) = size / numProc;
@@ -126,8 +126,12 @@ int main(int argc, char **argv)
 
     /* set displacement */
     *displacement = 0;
+    *receive_displacement = size;
     for (i = 1; i < numProc; i++)
+    {
       *(displacement + i) = *(displacement + i - 1) + *(sub_array_size + i - 1);
+      *(receive_displacement + i) = *(receive_displacement + i - 1) + *(sub_array_size + i - 1);
+    }
   }
 
   /***************************/
@@ -145,4 +149,21 @@ int main(int argc, char **argv)
   /***************************/
   /*         SORTING         */
   /***************************/
+  /* Call quicksort method */
+  quicksort(sub_array, 0, receive_size-1);
+
+
+
+  /* Gather all sub array */
+  MPI_Gatherv(sub_array, &receive_size, MPI_FLOAT, array, &size, displacement, MPI_FLOAT, 0, MPI_COMM_WWORLD);
+  
+  if (id == 0)
+  {
+    /* Merge array */
+    // for (i=0; i<size; i++)
+    // {
+    //   if ()
+    // }
+  }
+
 }
