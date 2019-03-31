@@ -1,7 +1,6 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <float.h>
 #include <omp.h>
 
 int median(float *arr, int low, int high)
@@ -28,11 +27,11 @@ void quicksort(float *arr, int first, int last)
   right = last;
   while (left <= right)
   {
-    if (*(arr + left) > pivot)
+    if (arr[left] > pivot)
     { // swap left element with right element
-      temp = *(arr + left);
-      *(arr + left) = *(arr + right);
-      *(arr + right) = temp;
+      temp = arr[left];
+      arr[left] = arr[right];
+      arr[right] = temp;
       if (right == i_pivot)
         i_pivot = left;
       right--;
@@ -80,7 +79,7 @@ int main(int argc, char **argv)
   array = (float *)malloc(sizeof(float) * size);
   /* looping read array's data */
   for (i = 0; i < size; i++)
-    fscanf(fp, "%f\n", array + i);
+    fscanf(fp, "%f\n", &array[i]);
   fclose(fp);
   /* start counting time */
   starttime = MPI_Wtime();
