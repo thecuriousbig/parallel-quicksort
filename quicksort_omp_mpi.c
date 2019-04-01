@@ -4,12 +4,12 @@
 #include <float.h>
 #include <omp.h>
 
-void merge(float *array, float *sorted_array, int size, int *displacement, int *sub_array_size, int numProc)
+void merge(double *array, double *sorted_array, int size, int *displacement, int *sub_array_size, int numProc)
 {
   int i, j;
   int minProcinTurn;
-  float min_in_turn;
-  float valueinTurn;
+  double min_in_turn;
+  double valueinTurn;
   int *index;
   int *end;
   index = (int *)malloc(sizeof(int) * numProc);
@@ -25,7 +25,7 @@ void merge(float *array, float *sorted_array, int size, int *displacement, int *
   /*merging*/
   for (i = 0; i < size; i++)
   {
-    min_in_turn = FLT_MAX;
+    min_in_turn = DBL_MAX;
     minProcinTurn = -1;
 
     for (j = 0; j < numProc; j++)
@@ -46,7 +46,7 @@ void merge(float *array, float *sorted_array, int size, int *displacement, int *
   }
 }
 
-int median(float *arr, int low, int high)
+int median(double *arr, int low, int high)
 {
   int med = (low + high) / 2;
   if ((arr[low] <= arr[med] && arr[med] <= arr[high]) || (arr[high] <= arr[med] && arr[med] <= arr[low]))
@@ -57,10 +57,10 @@ int median(float *arr, int low, int high)
     return high;
 }
 
-void quicksort(float *arr, int first, int last)
+void quicksort(double *arr, int first, int last)
 {
   int i_pivot, left, right;
-  float pivot, temp;
+  double pivot, temp;
   if (first >= last)
     return; // no need to sort
   // otherwise select a pivot
@@ -101,10 +101,10 @@ int main(int argc, char **argv)
   int id;
   FILE *fp;
   int size;
-  float *array;
-  float *sorted_array;
+  double *array;
+  double *sorted_array;
   int *sub_array_size;
-  float *sub_array;
+  double *sub_array;
   int *displacement;
   int receive_size;
   int *receive_displacement;
@@ -131,11 +131,11 @@ int main(int argc, char **argv)
     /* get size of array */
     fscanf(fp, "%d\n", &size);
     /* allocate array */
-    array = (float *)malloc(sizeof(float) * size);
-    sorted_array = (float *)malloc(sizeof(float) * size);
+    array = (double *)malloc(sizeof(double) * size);
+    sorted_array = (double *)malloc(sizeof(double) * size);
     /* looping read array's data */
     for (i = 0; i < size; i++)
-      fscanf(fp, "%f\n", &array[i]);
+      fscanf(fp, "%lf\n", &array[i]);
     fclose(fp);
     /* start counting time */
     startTime = MPI_Wtime();
@@ -161,9 +161,9 @@ int main(int argc, char **argv)
   /* Send size of partial array first for allocating receiving array */
   MPI_Scatter(sub_array_size, 1, MPI_INT, &receive_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
   /* Allocating array for recieving data from rank 0 */
-  sub_array = (float *)malloc(sizeof(float) * receive_size);
+  sub_array = (double *)malloc(sizeof(double) * receive_size);
   /* Scatter the array to other ranks */
-  MPI_Scatterv(array, sub_array_size, displacement, MPI_FLOAT, sub_array, receive_size, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Scatterv(array, sub_array_size, displacement, MPI_DOUBLE, sub_array, receive_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   /* Call quicksort method */
 #pragma omp parallel
@@ -173,11 +173,13 @@ int main(int argc, char **argv)
   }
 
   /* Gather all sub array */
-  MPI_Gatherv(sub_array, receive_size, MPI_FLOAT, array, sub_array_size, displacement, MPI_FLOAT, 0, MPI_COMM_WORLD);
+  MPI_Gatherv(sub_array, receive_size, MPI_DOUBLE, array, sub_array_size, displacement, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   if (id == 0)
   {
     /* Merge */
+    printf("numProc : %d\n", numProc);
+    // if (numProc > 1)
     merge(array, sorted_array, size, displacement, sub_array_size, numProc);
     /* Sort complete */
     endTime = MPI_Wtime();
@@ -187,6 +189,7 @@ int main(int argc, char **argv)
     for (i = 0; i < size; i++)
       /* random number between the range upper - lower */
       fprintf(fp, "%.1f\n", sorted_array[i]);
+    //	fprintf(fp, "%.1lf\n", array[i]);
   }
   MPI_Finalize();
   return 0;
